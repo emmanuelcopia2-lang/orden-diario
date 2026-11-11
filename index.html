@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orden Diario</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#eef1f6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b1020" media="(prefers-color-scheme: dark)">
+<style>
+@font-face{font-family:'Figtree';font-weight:400;font-display:swap;src:url('fonts/figtree-latin-400-normal.woff2') format('woff2')}@font-face{font-family:'Figtree';font-weight:500;font-display:swap;src:url('fonts/figtree-latin-500-normal.woff2') format('woff2')}@font-face{font-family:'Figtree';font-weight:700;font-display:swap;src:url('fonts/figtree-latin-700-normal.woff2') format('woff2')}@font-face{font-family:'Bricolage Grotesque';font-weight:600;font-display:swap;src:url('fonts/bricolage-grotesque-latin-600-normal.woff2') format('woff2')}@font-face{font-family:'Bricolage Grotesque';font-weight:700;font-display:swap;src:url('fonts/bricolage-grotesque-latin-700-normal.woff2') format('woff2')}
+/* Dirección: papel azulado frío y tinta; un solo acento ultramar. La audacia se gasta en el número grande del día; el resto es silencioso. */
+:root{
+  --bg:#eef1f6; --card:#ffffff; --ink:#0e1726; --muted:#505c70; --line:#d5dbe6;
+  --accent:#2f4bff; --accent-ink:#ffffff; --accent-soft:#e3e8ff; --accent-text:#2339d6;
+  --good:#1b7f4b; --warn:#9a4a00; --bad:#b3261e; --star:#d99100;
+  --display:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif; --body:'Figtree',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b1020; --card:#141a2e; --ink:#e9edf8; --muted:#a3adc4; --line:#26304a;
+    --accent:#8ea2ff; --accent-ink:#0b1020; --accent-soft:#1d2750; --accent-text:#b4c0ff;
+    --good:#6fd29c; --warn:#f0b35c; --bad:#ff8a80; --star:#ffc533; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b1020; --card:#141a2e; --ink:#e9edf8; --muted:#a3adc4; --line:#26304a;
+  --accent:#8ea2ff; --accent-ink:#0b1020; --accent-soft:#1d2750; --accent-text:#b4c0ff;
+  --good:#6fd29c; --warn:#f0b35c; --bad:#ff8a80; --star:#ffc533; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--body);-webkit-tap-highlight-color:transparent;padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+h1,h2,h3,p{margin:0}
+h1,h2{font-family:var(--display);font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+h1{font-size:28px;line-height:1.1} h2{font-size:19px;line-height:1.2} h3{font-size:17px;font-weight:700}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:8px}
+::placeholder{color:var(--muted);opacity:1}
+.wrap{max-width:560px;margin:0 auto;padding:16px 16px 0;display:block}
+.pagehead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 16px;min-height:48px}
+.hero{display:flex;align-items:center;gap:14px;margin:4px 0 18px}
+.bignum{font:700 72px/.85 var(--display);letter-spacing:-.05em;color:var(--accent-text);font-variant-numeric:tabular-nums}
+.hmeta{display:flex;flex-direction:column;gap:1px;min-width:0}
+.hmeta .d{color:var(--muted);font-size:14px}
+.hmeta .g{font:700 22px/1.15 var(--display)}
+.hmeta .s{color:var(--muted);font-size:14px;margin-top:2px}
+.stack{display:flex;flex-direction:column;gap:20px}
+.stack.tight{gap:12px}
+.row{display:flex;align-items:center;gap:10px}
+.between{justify-content:space-between}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+.card.prio{border:1.5px solid var(--accent)}
+.group .sec-title{padding:0 2px}
+.sec-title{display:flex;justify-content:space-between;align-items:baseline;margin:0 0 6px}
+.sec-title .count{color:var(--muted);font-size:14px;font-weight:700}
+.muted{color:var(--muted);font-size:14px}
+.sub{color:var(--muted);font-size:14px}
+.pill{display:inline-flex;align-items:center;font-size:13px;font-weight:700;padding:1px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent-text)}
+.pill.warn{background:transparent;border:1px solid var(--warn);color:var(--warn)}
+.pill.bad{background:transparent;border:1px solid var(--bad);color:var(--bad)}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px 16px;min-height:48px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-align:center}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.small{min-height:44px;padding:6px 12px;font-size:15px}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--accent-text)}
+.btn.danger{color:var(--bad)}
+.btn.block{width:100%}
+.btn.icon{width:48px;padding:0;font-size:20px}
+input[type=text],input[type=number],input[type=date],input[type=time],select,textarea{width:100%;min-height:48px;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:10px 12px;font-size:16px}
+textarea{min-height:84px;resize:vertical}
+label{font-size:14px;font-weight:700;display:block;margin-bottom:4px}
+.field{display:flex;flex-direction:column}
+.capture{display:flex;gap:8px}
+.capture input{flex:1;background:var(--card)}
+/* filas */
+.task{display:flex;gap:2px;align-items:flex-start;padding:2px 0;border-bottom:1px solid var(--line)}
+.task:last-child{border-bottom:0}
+.chk{width:48px;height:52px;flex:none;border:0;background:none;padding:0;display:grid;place-items:center}
+.chk .dot{width:26px;height:26px;border-radius:50%;border:2px solid var(--muted);display:grid;place-items:center;font-style:normal}
+.chk.on .dot{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chk svg{width:15px;height:15px;opacity:0}.chk.on svg{opacity:1}
+.task-body{flex:1;min-width:0;text-align:left;background:none;border:0;padding:11px 4px;display:block}
+.task-body.static{cursor:default}
+.task-title{display:block;font-weight:500;overflow-wrap:anywhere;font-size:17px;line-height:1.35}
+.done .task-title{text-decoration:line-through;color:var(--muted)}
+.meta{display:flex;flex-wrap:wrap;gap:4px 8px;margin-top:3px;align-items:center}
+.star{width:48px;height:52px;flex:none;background:none;border:0;font-size:24px;line-height:1;padding:0;color:var(--muted)}
+.star.on{color:var(--star)}
+/* hábitos */
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:12px}
+.day{text-align:center;font-size:13px;color:var(--muted)}
+.day.t{color:var(--accent-text);font-weight:700}
+.day button{display:block;width:100%;height:44px;margin-top:3px;border-radius:12px;border:1px solid var(--line);background:var(--bg)}
+.day button.on{background:var(--accent);border-color:var(--accent)}
+.day button.today{outline:2px solid var(--accent);outline-offset:2px}
+.stats{display:flex;gap:22px;margin-top:14px;flex-wrap:wrap}
+.stats b{display:block;font:700 22px/1.1 var(--display)}
+.stats span{font-size:13px;color:var(--muted)}
+/* nav */
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);display:flex;justify-content:center;padding:6px 8px calc(6px + env(safe-area-inset-bottom));z-index:5}
+nav .in{display:flex;width:100%;max-width:560px;gap:4px}
+nav button{flex:1;background:none;border:0;padding:6px 2px;border-radius:12px;font-size:13px;font-weight:700;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;min-height:56px}
+nav button[aria-current]{color:var(--accent-text);background:var(--accent-soft)}
+nav svg{width:24px;height:24px}
+/* hojas */
+.sheet-bg{position:fixed;inset:0;background:rgba(8,12,24,.55);z-index:10;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--card);width:100%;max-width:560px;max-height:92vh;max-height:92dvh;border-radius:22px 22px 0 0;display:flex;flex-direction:column;overflow:hidden}
+.grab{width:40px;height:4px;border-radius:4px;background:var(--line);margin:8px auto 0;flex:none}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;padding:4px 6px 0 20px;flex:none}
+#sheetT:focus{outline:none}
+.card .row .btn.small.ghost:first-child{margin-left:-12px}
+.x{width:48px;height:48px;border:0;background:none;border-radius:50%;font-size:20px;color:var(--muted)}
+.sheet-body{overflow:auto;padding:8px 20px 18px;display:flex;flex-direction:column;gap:16px;overscroll-behavior:contain}
+.sheet-foot{flex:none;padding:12px 20px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);display:flex;gap:10px;background:var(--card)}
+.sheet-foot .btn{flex:1}
+.dz{display:flex;flex-direction:column;gap:6px;padding-top:12px;border-top:1px solid var(--line)}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.seg button{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 14px;font-size:15px;font-weight:700;min-height:44px}
+.card .seg button{background:var(--bg)}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.seg.nums button{min-width:48px}
+/* enfoque */
+.timer{font:700 40px/1 var(--display);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.banner{background:var(--accent-soft);color:var(--ink);border-radius:14px;padding:12px 14px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.why{font-size:14px;color:var(--muted);border-left:3px solid var(--accent);padding-left:10px}
+.why summary{cursor:pointer;font-weight:700;color:var(--accent-text);min-height:44px;display:flex;align-items:center}
+.why p{margin:4px 0 8px}
+summary.more{cursor:pointer;font-weight:700;min-height:48px;display:flex;align-items:center;color:var(--accent-text)}
+.acc{padding:0 16px}
+.acc>summary{list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:56px;cursor:pointer}
+.acc>summary::-webkit-details-marker{display:none}
+.acc>summary::after{content:'▾';color:var(--muted);transition:transform .15s}
+.acc[open]>summary::after{transform:rotate(180deg)}
+.acc>*:not(summary){margin-bottom:12px}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:6px}
+.bar span{display:block;height:100%}
+.check{display:flex;align-items:center;gap:12px;min-height:48px}
+.check input{width:24px;height:24px;min-height:0;flex:none;accent-color:var(--accent)}
+.check label{margin:0;font-weight:500}
+.spark{width:100%;height:56px;display:block;margin-top:8px}
+.empty{text-align:center;color:var(--muted);padding:20px 8px;display:flex;flex-direction:column;gap:12px;align-items:center}
+.quad{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.quad button{border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:10px;text-align:left;font-size:14px;min-height:56px}
+.quad button[aria-pressed=true]{border-color:var(--accent);background:var(--accent-soft)}
+#toast{position:fixed;left:0;right:0;bottom:calc(84px + env(safe-area-inset-bottom));display:flex;justify-content:center;z-index:30;pointer-events:none}
+.toast{pointer-events:auto;background:var(--ink);color:var(--bg);padding:6px 8px 6px 16px;border-radius:14px;font-size:15px;max-width:92%;display:flex;align-items:center;gap:8px;min-height:48px}
+.toast .btn{background:transparent;border-color:transparent;color:var(--bg);text-decoration:underline}
+[inert]{pointer-events:none}
+@media (prefers-reduced-motion:no-preference){
+  .btn,.chk .dot,.day button{transition:background .15s,border-color .15s}
+  .chk.on .dot{animation:pop .22s ease-out}
+  @keyframes pop{0%{transform:scale(.8)}60%{transform:scale(1.12)}100%{transform:scale(1)}}
+  .sheet.enter{animation:up .22s ease-out}
+  @keyframes up{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}
+}
+@media (prefers-contrast:more){:root{--line:#7a8499}}
+</style>
+</head>
+<body>
+<main class="wrap" id="app"></main>
+<nav id="nav" aria-label="Secciones"></nav>
+<div id="modal"></div>
+<div id="toast" aria-live="polite"></div>
+
+<script>
+/* ============ Utilidades ============ */
+const $ = (s, r=document) => r.querySelector(s);
+const uid = () => Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4);
+const pad = n => String(n).padStart(2,'0');
+const dkey = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const today = () => dkey(new Date());
+const addDays = (k, n) => { const [y,m,d]=k.split('-').map(Number); const dt=new Date(y,m-1,d+n); return dkey(dt); };
+const DOW = ['D','L','M','X','J','V','S'];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtDate = k => { if(!k) return ''; const [y,m,d]=k.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('es',{weekday:'short',day:'numeric',month:'short'}); };
+const dowOf = k => { const [y,m,d]=k.split('-').map(Number); return new Date(y,m-1,d).getDay(); };
+
+/* ============ Estado y guardado ============ */
+const LS = 'orden-diario-v1';
+let S = { tasks:[], habits:[], metrics:[], logs:[], reviews:{}, settings:{ focusMin:25, breakMin:5, seeded:false } };
+let ui = { tab:'hoy', filter:'abiertas', modal:null };
+let dbDoc = null, saveTimer = null, saving = false, dirty = false, saveState = 'local';
+
+function seed(){
+  if (S.settings.seeded) return;
+  S.settings.seeded = true;
+  S.settings.onboarded = false;
+}
+function loadLocal(){ try{ const r = localStorage.getItem(LS); if(r) return JSON.parse(r); }catch(e){} return null; }
+function mirrorLocal(){ try{ localStorage.setItem(LS, JSON.stringify(S)); }catch(e){} }
+function save(){
+  if(!S.settings.onboarded && (S.tasks.length||S.habits.length||S.metrics.length)) S.settings.onboarded = true;
+  mirrorLocal(); dirty = true; clearTimeout(saveTimer);
+  saveTimer = setTimeout(flush, 900);
+}
+async function flush(){
+  if(!dbDoc){ return; }
+  if(saving){ saveTimer = setTimeout(flush, 600); return; }
+  if(!dirty) return;
+  saving = true; dirty = false;
+  try{ await dbDoc.set({ state: JSON.stringify(S), at: Date.now() }); saveState = 'cloud'; }
+  catch(e){ saveState = 'local'; }
+  saving = false; paintStatus();
+}
+function paintStatus(){ const el = $('#status'); if(el) el.textContent = saveState==='cloud' ? 'Guardado en tu cuenta' : 'Guardado solo en este navegador'; }
+
+function checkAbsence(){
+  if(S.settings.onboarded===undefined) S.settings.onboarded = !!(S.tasks.length||S.habits.length||S.logs.length);
+  const t = today(), last = S.settings.lastOpen;
+  if(last && last < t){
+    const gap = Math.round((new Date(t) - new Date(last)) / 86400000);
+    if(gap >= 3) ui.welcome = { gap };
+  }
+  if(S.settings.lastOpen !== t){ S.settings.lastOpen = t; save(); }
+}
+async function init(){
+  const loc = loadLocal();
+  if(loc) S = Object.assign(S, loc);
+  seed(); checkAbsence(); render();
+  try{
+    const user = await claude.use('user');
+    const db = await claude.use('db');
+    const id = user ? await user.id() : null;
+    if(db && id){
+      dbDoc = db.collection('data/users/'+id).doc('app');
+      const snap = await dbDoc.get();
+      if(snap.exists && snap.data() && snap.data().state){
+        const remote = JSON.parse(snap.data().state);
+        const rt = remote.settings && remote.settings.seeded;
+        if(rt){ S = Object.assign({tasks:[],habits:[],metrics:[],logs:[],reviews:{},settings:{focusMin:25,breakMin:5,seeded:true}}, remote); mirrorLocal(); }
+      } else { dirty = true; await flush(); }
+      saveState = 'cloud'; render();
+    }
+  }catch(e){ /* sin base de datos: sigue en local */ }
+  tickBanner();
+}
+
+/* ============ Ciencia de cada función ============ */
+const WHY = {
+  hoy:'Evidencia moderada: escribir un plan concreto para una meta pendiente reduce los pensamientos intrusivos sobre ella (Masicampo y Baumeister, 2011). Limitar a 3 prioridades es una regla práctica, no un hallazgo de estudios.',
+  cue:'Evidencia sólida pero menor de lo que se creía: los planes "cuando pase X, haré Y" ayudan a cumplir. El metaanálisis de 2006 halló un efecto medio (d = 0.65); uno de 2025 con 642 pruebas halló un efecto menor (d = 0.27) y señales de sesgo de publicación. El efecto parece real, pero modesto.',
+  habit:'Evidencia moderada: la mediana para volverse automático es de unos 2 meses (59 a 66 días), con casos de 4 días a casi un año (Singh et al., 2024; Lally et al., 2010). Fallar un día suelto casi no afecta. "No falles dos veces" es una guía práctica, no un hallazgo directo. Los hábitos que eliges tú y los de la mañana tienden a ser más fuertes.',
+  tiny:'Respaldo directo limitado: la versión mínima viene del método de BJ Fogg, que se apoya sobre todo en su propio trabajo. Sí hay apoyo indirecto: las metas modestas y alcanzables favorecen formar el hábito (Singh et al., 2024).',
+  obstacle:'Evidencia pequeña a moderada: pensar en el obstáculo probable y planear qué hacer ("si pasa esto, entonces haré esto") mejora un poco el cumplimiento (metaanálisis de 2021, g = 0.34, con posible sesgo de publicación).',
+  steps:'Respaldo indirecto: dividir en pasos concretos convierte una meta vaga en un plan, y los planes específicos son lo que respalda la investigación.',
+  quad:'Sin estudios directos: la matriz de Eisenhower es una herramienta de decisión popular, pero no la encontré validada en ensayos.',
+  data:'Evidencia sólida: monitorear tu progreso mejora el logro de metas (138 estudios, d = 0.40; Harkin et al., 2016). Funciona mejor si lo registras por escrito, si se lo cuentas a alguien y si lo combinas con metas y planes.',
+  focus:'Evidencia mixta: los descansos ayudan, pero 25/5 no tiene nada de especial. En un estudio de 2025 con 94 estudiantes, Pomodoro y descansos a tu ritmo rindieron igual. Ajusta los tiempos a lo que te funcione.',
+  review:'Respaldo indirecto: no hay estudios de la revisión semanal como tal, pero se apoya en el monitoreo de progreso (Harkin et al., 2016) y en ajustar planes con retroalimentación.'
+};
+const WHYT = {hoy:'Prioridades de hoy',cue:'Plan cuando…, haré…',habit:'Tiempo para formar un hábito',tiny:'Versión mínima',obstacle:'Plan para obstáculos',steps:'Pasos pequeños',quad:'Matriz de Eisenhower',data:'Registrar datos',focus:'Bloques de enfoque',review:'Revisión semanal'};
+const whyBox = (...ks) => `<details class="why"><summary>Qué dice la investigación</summary>${ks.map(k=>`<p>${esc(WHY[k])}</p>`).join('')}</details>`;
+const why = k => whyBox(k);
+
+/* ============ Cálculos ============ */
+function habitStats(h){
+  const days = h.days || {};
+  const total = Object.keys(days).length;
+  const t = today();
+  // racha flexible: se permite 1 día perdido, no 2 seguidos
+  let cur = t; if(!days[cur]) cur = addDays(cur,-1);
+  let streak = 0, miss = 0, probe = cur;
+  for(let i=0;i<800;i++){
+    if(days[probe]){ streak++; miss = 0; }
+    else { miss++; if(miss>=2) break; }
+    probe = addDays(probe,-1);
+    if(probe < (h.created||'0000')) { if(!days[probe]) break; }
+  }
+  let n30 = 0; for(let i=0;i<30;i++) if(days[addDays(t,-i)]) n30++;
+  const keys = Object.keys(days).sort(); const lastK = keys[keys.length-1];
+  const since = lastK ? Math.round((new Date(t) - new Date(lastK)) / 86400000) : null;
+  return { total, streak, pct:Math.min(100, Math.round(total/66*100)), rate30:Math.round(n30/30*100), n30, since };
+}
+function weekRange(){ const t = today(); const out=[]; for(let i=6;i>=0;i--) out.push(addDays(t,-i)); return out; }
+function tasksOpen(){ return S.tasks.filter(x=>!x.done && !x.someday); }
+function tasksSomeday(){ return S.tasks.filter(x=>!x.done && x.someday); }
+function sortTasks(a,b){
+  if(!!b.top - !!a.top) return !!b.top - !!a.top;
+  const da = a.due||'9999', db_ = b.due||'9999';
+  if(da!==db_) return da<db_?-1:1;
+  return (a.time||'99').localeCompare(b.time||'99');
+}
+function dueMeta(t){
+  if(!t.due) return null; const n = today();
+  if(t.due < n) return { txt:'Vencida · '+fmtDate(t.due), cls:'bad' };
+  if(t.due === n) return { txt:'Hoy'+(t.time?' · '+t.time:''), cls:'warn' };
+  return { txt:fmtDate(t.due)+(t.time?' · '+t.time:''), cls:'' };
+}
+
+const activeHabits = () => S.habits.filter(h=>!h.archived && !h.paused && !h.graduated);
+const PRESETS = [{name:'Ánimo',type:'scale',unit:'1 a 5'},{name:'Horas de sueño',type:'num',unit:'h'},{name:'Vasos de agua',type:'num',unit:'vasos'},{name:'Energía',type:'scale',unit:'1 a 5'}];
+
+function capacityBar(){
+  const t = today();
+  const items = tasksOpen().filter(x=>x.top || (x.due && x.due<=t)).filter(x=>x.est>0);
+  if(!items.length) return '';
+  const mins = items.reduce((a,x)=>a+x.est,0), capH = S.settings.capacityH||6, cap = capH*60;
+  const pct = Math.min(100, Math.round(mins/cap*100)), over = mins>cap;
+  const fmt = m => Math.floor(m/60)+' h '+pad(m%60)+' min';
+  return `<div style="margin-top:10px"><div class="row" style="justify-content:space-between"><span class="muted">Tiempo planeado: ${fmt(mins)} de ${capH} h</span>${over?'<span class="pill warn">Demasiado</span>':''}</div><div class="bar"><span style="width:${pct}%;background:${over?'var(--warn)':'var(--accent)'}"></span></div><div class="muted" style="font-size:12px;margin-top:4px">Solemos subestimar cuánto tardan las cosas. Deja margen para imprevistos.</div></div>`;
+}
+function welcomeBlock(){
+  const t = today(); const late = tasksOpen().filter(x=>x.due && x.due<t);
+  let html = '';
+  if(ui.welcome && !ui.welcomeDismissed){
+    html += `<div class="card"><h2>Qué bueno verte</h2><p style="margin:8px 0">Pasaron ${ui.welcome.gap} días. Las pausas son normales y no borran lo que ya hiciste. Lo que más ayuda es retomar con algo pequeño.</p><div class="row" style="flex-wrap:wrap">${late.length?`<button class="btn primary" data-act="freshStart">Empezar de cero (${late.length} vencidas a Algún día)</button>`:''}<button class="btn" data-act="welcomeOk">Seguir como estaba</button></div></div>`;
+  } else if(late.length>=5){
+    html += `<div class="card"><b>Tienes ${late.length} tareas vencidas.</b><p class="muted" style="margin:6px 0 10px">Puedes pasarlas a Algún día y decidir después cuáles siguen importando.</p><button class="btn" data-act="freshStart">Pasar vencidas a Algún día</button></div>`;
+  }
+  if(dowOf(t)===1 && !ui.welcome && !tasksOpen().some(x=>x.top)) html += `<div class="banner">Empieza la semana: elige hasta 3 prioridades con la estrella.</div>`;
+  return html;
+}
+function onboardBlock(){
+  if(S.settings.onboarded) return '';
+  return `<div class="card"><h2>Empieza con una sola cosa</h2><p class="muted" style="margin:6px 0 12px">Lo demás aparece cuando lo necesites. ¿Qué quieres hacer primero?</p><div class="stack" style="gap:8px"><button class="btn primary" data-act="obTask">Anotar una tarea</button><button class="btn" data-act="obHabit">Crear un hábito pequeño</button><button class="btn" data-act="obData">Medir algo (ánimo, sueño…)</button><button class="btn ghost" data-act="obSkip">Explorar yo mismo</button></div></div>`;
+}
+function quickLog(m){
+  const tl = S.logs.find(l=>l.metric===m.id && l.date===today());
+  if(m.type==='scale') return `<div class="seg nums" style="margin-top:10px" role="group" aria-label="Registrar ${esc(m.name)} de hoy">${[1,2,3,4,5].map(v=>`<button data-act="qlog" data-id="${m.id}" data-v="${v}" aria-pressed="${!!(tl&&tl.value===v)}" style="min-width:46px">${v}</button>`).join('')}</div>`;
+  if(m.type==='bool') return `<div class="seg" style="margin-top:10px" role="group" aria-label="Registrar ${esc(m.name)} de hoy">${[[1,'Sí'],[0,'No']].map(([v,l])=>`<button data-act="qlog" data-id="${m.id}" data-v="${v}" aria-pressed="${!!(tl&&tl.value===v)}" style="min-width:64px">${l}</button>`).join('')}</div>`;
+  return '';
+}
+function icsHabit(h){
+  const d = today().replace(/-/g,''); const tm = (h.tm||'08:00');
+  const [hh,mm] = tm.split(':').map(Number); const e = new Date(2000,0,1,hh,mm+15);
+  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Orden Diario//ES','BEGIN:VEVENT','UID:h'+h.id+'@orden-diario','DTSTAMP:'+new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z','DTSTART:'+d+'T'+tm.replace(':','')+'00','DTEND:'+d+'T'+pad(e.getHours())+pad(e.getMinutes())+'00','RRULE:FREQ=DAILY;COUNT=30','SUMMARY:'+(h.name+(h.tiny?' ('+h.tiny+')':'')).replace(/[\n,;]/g,' '),'BEGIN:VALARM','TRIGGER:-PT0M','ACTION:DISPLAY','DESCRIPTION:Hábito','END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n');
+}
+
+/* ============ Render ============ */
+const ICON = {
+  hoy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+  tareas:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3.5 6l1.2 1.2L7 5M3.5 12l1.2 1.2L7 11M3.5 18l1.2 1.2L7 17"/></svg>',
+  habitos:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg>',
+  datos:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+  mas:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg>'
+};
+const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>';
+const TABS = [['hoy','Hoy'],['tareas','Tareas'],['habitos','Hábitos'],['datos','Datos'],['mas','Más']];
+
+function render(){
+  $('#nav').innerHTML = `<div class="in">`+TABS.map(([k,l])=>`<button data-tab="${k}" ${ui.tab===k?'aria-current="page"':''}>${ICON[k]}<span>${l}</span></button>`).join('')+`</div>`;
+  const v = { hoy:vHoy, tareas:vTareas, habitos:vHabitos, datos:vDatos, mas:vMas }[ui.tab]();
+  $('#app').innerHTML = v;
+  paintStatus();
+}
+
+const chk = (on, attrs, label) => `<button class="chk ${on?'on':''}" ${attrs} aria-label="${label}"><i class="dot">${CHECK}</i></button>`;
+function taskRow(t){
+  const m = dueMeta(t);
+  const st = (t.steps||[]); const sd = st.filter(s=>s.done).length;
+  const sub = [t.est?t.est+' min':'', st.length?`${sd}/${st.length} pasos`:'', t.cue?'con plan':''].filter(Boolean).join(' · ');
+  return `<div class="task ${t.done?'done':''}">
+    ${chk(t.done, `data-act="toggle" data-id="${t.id}"`, `${t.done?'Marcar pendiente':'Completar'}: ${esc(t.title)}`)}
+    <button class="task-body" data-act="edit" data-id="${t.id}">
+      <span class="task-title">${esc(t.title)}</span>
+      ${(m||sub)?`<span class="meta">${m?`<span class="pill ${m.cls}">${esc(m.txt)}</span>`:''}${sub?`<span class="sub">${esc(sub)}</span>`:''}</span>`:''}
+    </button>
+    <button class="star ${t.top?'on':''}" data-act="top" data-id="${t.id}" aria-label="${t.top?'Quitar de prioridades de hoy':'Fijar como prioridad de hoy'}" aria-pressed="${!!t.top}">${t.top?'★':'☆'}</button>
+  </div>`;
+}
+
+function vHoy(){
+  const n = new Date();
+  const greet = n.getHours()<12?'Buenos días':n.getHours()<19?'Buenas tardes':'Buenas noches';
+  const open = tasksOpen();
+  const tops = open.filter(t=>t.top).sort(sortTasks);
+  const due = open.filter(t=>!t.top && t.due && t.due<=today()).sort(sortTasks);
+  const inbox = open.filter(t=>!t.top && !t.due).sort((a,b)=>(b.created||'').localeCompare(a.created||''));
+  const habits = activeHabits();
+  const hdone = habits.filter(h=>(h.days||{})[today()]).length;
+  const doneToday = S.tasks.filter(t=>t.done && t.doneAt===today()).length;
+  const todo = tops.length + due.length;
+  const topWarn = tops.length>3 ? `<div class="banner">Tienes ${tops.length} prioridades. Con 3 o menos es más fácil terminarlas.</div>` : '';
+  const summary = `${doneToday} ${doneToday===1?'hecha':'hechas'} · ${todo} por hacer hoy`;
+  return `
+  <div class="hero"><div class="bignum" aria-hidden="true">${n.getDate()}</div><div class="hmeta"><span class="d">${esc(n.toLocaleDateString('es',{weekday:'long'})+', '+n.toLocaleDateString('es',{month:'long'}))}</span><h1 class="g" style="font-size:22px">${greet}</h1><span class="s">${summary}</span></div></div>
+  <div class="stack">
+    <div id="bannerSlot"></div>
+    ${welcomeBlock()}${onboardBlock()}
+    <form class="capture" id="quick"><input type="text" id="quickIn" placeholder="¿Qué tienes en la cabeza?" aria-label="Nueva tarea" autocomplete="off" enterkeyhint="done"><button class="btn primary" type="submit">Añadir</button></form>
+    <section class="card prio" aria-labelledby="hPrio">
+      <div class="sec-title"><h2 id="hPrio">Prioridades de hoy</h2><span class="count">${tops.length}/3</span></div>
+      ${topWarn}
+      ${tops.length?tops.map(taskRow).join(''):`<div class="empty">Fija con ☆ lo más importante de hoy. Elige entre 1 y 3.</div>`}
+      ${capacityBar()}
+    </section>
+    ${due.length?`<section class="group" aria-labelledby="hDue"><div class="sec-title"><h2 id="hDue">Vencen hoy o antes</h2><span class="count">${due.length}</span></div>${due.map(taskRow).join('')}</section>`:''}
+    ${habits.length?`<section class="card" aria-labelledby="hHab">
+      <div class="sec-title"><h2 id="hHab">Hábitos de hoy</h2><span class="count">${hdone}/${habits.length}</span></div>
+      ${habits.map(h=>{const d=(h.days||{})[today()];const s=habitStats(h);const sub=[s.streak>0?'Racha '+s.streak:'',h.tiny?'Mínimo: '+h.tiny:''].filter(Boolean).join(' · ');return `<div class="task ${d?'done':''}">${chk(!!d, `data-act="hday" data-id="${h.id}" data-day="${today()}"`, `${d?'Desmarcar':'Marcar'} ${esc(h.name)} hoy`)}<div class="task-body static"><span class="task-title">${esc(h.name)}</span>${sub?`<span class="meta"><span class="sub">${esc(sub)}</span></span>`:''}</div></div>`}).join('')}
+    </section>`:''}
+    ${inbox.length?`<section class="group" aria-labelledby="hInb"><div class="sec-title"><h2 id="hInb">Por clasificar</h2><span class="count">${inbox.length}</span></div><p class="muted" style="margin-bottom:4px">Fíjalas con ☆, ponles fecha o mándalas a Algún día.</p>${inbox.slice(0,5).map(taskRow).join('')}${inbox.length>5?`<p class="muted" style="padding-top:8px">Hay ${inbox.length-5} más en Tareas.</p>`:''}</section>`:''}
+    ${focusCard()}
+  </div>`;
+}
+
+/* ---- Enfoque ---- */
+let fx = { running:false, mode:'focus', left:0, end:0, timer:null, taskId:'' };
+function focusCard(){
+  const mins = fx.mode==='focus' ? S.settings.focusMin : S.settings.breakMin;
+  const left = fx.running ? Math.max(0, Math.round((fx.end-Date.now())/1000)) : (fx.left || mins*60);
+  const mm = pad(Math.floor(left/60)), ss = pad(left%60);
+  return `<section class="card" aria-label="Bloque de enfoque">
+    <div class="row between">
+      <div class="timer" id="timerTxt" role="timer" aria-label="Tiempo restante">${mm}:${ss}</div>
+      <div class="row"><button class="btn primary" data-act="fxToggle">${fx.running?'Pausar':'Empezar'}</button><button class="btn icon" data-act="fxReset" aria-label="Reiniciar">↺</button></div>
+    </div>
+    <div class="seg" style="margin-top:12px" role="group" aria-label="Modo"><button data-act="fxMode" data-m="focus" aria-pressed="${fx.mode==='focus'}">Trabajo ${S.settings.focusMin} min</button><button data-act="fxMode" data-m="break" aria-pressed="${fx.mode!=='focus'}">Descanso ${S.settings.breakMin} min</button></div>
+  </section>`;
+}
+function fxTick(){
+  const left = Math.max(0, Math.round((fx.end-Date.now())/1000));
+  const el = $('#timerTxt'); if(el) el.textContent = `${pad(Math.floor(left/60))}:${pad(left%60)}`;
+  if(left<=0){
+    clearInterval(fx.timer); fx.running=false; fx.left=0; beep();
+    try{ navigator.vibrate && navigator.vibrate([200,100,200]); }catch(e){}
+    toast(fx.mode==='focus'?'Bloque terminado. Descansa unos minutos.':'Descanso terminado. Listo para otro bloque.');
+    fx.mode = fx.mode==='focus'?'break':'focus'; fx.left = 0;
+    if(ui.tab==='hoy') render();
+  }
+}
+let actx = null;
+function beep(){ try{ actx = actx || new (window.AudioContext||window.webkitAudioContext)(); const o=actx.createOscillator(), g=actx.createGain(); o.connect(g); g.connect(actx.destination); o.frequency.value=880; g.gain.value=.15; o.start(); o.stop(actx.currentTime+.4);}catch(e){} }
+
+/* ---- Tareas ---- */
+function vTareas(){
+  const f = ui.filter;
+  const nAb = tasksOpen().length, nAl = tasksSomeday().length;
+  let list;
+  if(f==='abiertas') list = tasksOpen().sort(sortTasks);
+  else if(f==='algun') list = tasksSomeday();
+  else list = S.tasks.filter(t=>t.done).sort((a,b)=>(b.doneAt||'').localeCompare(a.doneAt||''));
+  const hint = f==='algun' ? 'Aquí viven las cosas que no son para ahora. Revísalas en tu revisión semanal.' : f==='hechas' ? 'Cuando completes tareas, aparecerán aquí.' : 'No tienes tareas pendientes.';
+  return `
+  <div class="pagehead"><h1>Tareas</h1><button class="btn primary" data-act="newTask">Añadir</button></div>
+  <div class="stack tight">
+    <div class="seg" role="group" aria-label="Filtro">
+      ${[['abiertas','Pendientes ('+nAb+')'],['algun','Algún día ('+nAl+')'],['hechas','Hechas']].map(([k,l])=>`<button data-act="filter" data-f="${k}" aria-pressed="${f===k}">${l}</button>`).join('')}
+    </div>
+    <div class="card" style="padding:6px 12px">
+      ${list.length?list.map(taskRow).join(''):`<div class="empty">${hint}${f==='abiertas'?'<button class="btn" data-act="newTask">Añadir una tarea</button>':''}</div>`}
+    </div>
+  </div>`;
+}
+
+/* ---- Hábitos ---- */
+function vHabitos(){
+  const hs = activeHabits();
+  const paused = S.habits.filter(h=>h.paused && !h.graduated && !h.archived);
+  const grads = S.habits.filter(h=>h.graduated);
+  const week = weekRange();
+  return `
+  <div class="pagehead"><h1>Hábitos</h1><button class="btn primary" data-act="newHabit">Añadir</button></div>
+  <div class="stack tight">
+    ${hs.length>3?`<div class="banner">Tienes ${hs.length} hábitos activos. Consejo práctico, no un hallazgo de estudios: con pocos es más fácil ser constante.</div>`:''}
+    ${hs.map(h=>{ const s=habitStats(h); const au=h.auto||[]; const lastA=au[au.length-1], prevA=au[au.length-2];
+      const canAuto = s.total>=7 && (!lastA || (new Date(today())-new Date(lastA.d))/86400000>=7);
+      const ready = !!(lastA && prevA && lastA.v>=4 && prevA.v>=4);
+      return `
+    <section class="card" aria-label="${esc(h.name)}">
+      <div class="row between" style="align-items:flex-start">
+        <div style="min-width:0"><h3>${esc(h.name)}</h3>${h.cue?`<p class="sub">${esc(h.cue)}${h.tiny?', haré: '+esc(h.tiny):''}</p>`:''}</div>
+        <button class="btn small ghost" data-act="editHabit" data-id="${h.id}">Editar</button>
+      </div>
+      <div class="week">${week.map(k=>`<div class="day ${k===today()?'t':''}">${k===today()?'Hoy':DOW[dowOf(k)]}<button data-act="hday" data-id="${h.id}" data-day="${k}" class="${(h.days||{})[k]?'on':''} ${k===today()?'today':''}" aria-label="${esc(h.name)}, ${esc(new Date(k+'T12:00').toLocaleDateString('es',{weekday:'long',day:'numeric',month:'long'}))}" aria-pressed="${!!(h.days||{})[k]}"></button></div>`).join('')}</div>
+      <div class="stats"><div><b>${s.streak}</b><span>días de racha</span></div><div><b>${s.rate30}%</b><span>últimos 30 días</span></div><div><b>${s.total}</b><span>días en total</span></div></div>
+      ${h.rz?`<p class="sub" style="margin-top:12px">Mi razón: ${esc(h.rz)}</p>`:''}
+      ${s.since!==null && s.since>=3 && h.tiny?`<div class="banner" style="margin-top:12px">Para retomar basta con la versión mínima: ${esc(h.tiny)}.</div>`:''}
+      ${canAuto?`<div style="margin-top:14px"><div class="sub">¿Qué tan automático se siente?${lastA?' (último: '+lastA.v+'/5)':''}</div><div class="seg nums" style="margin-top:6px" role="group" aria-label="Nivel de automatismo">${[1,2,3,4,5].map(v=>`<button data-act="auto" data-id="${h.id}" data-v="${v}" aria-pressed="false">${v}</button>`).join('')}</div><div class="sub" style="font-size:13px;margin-top:4px">1 = tengo que obligarme, 5 = lo hago sin pensar</div></div>`:''}
+      ${ready?`<div class="banner" style="margin-top:12px"><span>Parece que ya es automático. Puedes graduarlo y dejar de marcarlo.</span><button class="btn small" data-act="gradHabit" data-id="${h.id}">Graduar</button></div>`:''}
+    </section>`}).join('')||`<div class="card empty">Crea un hábito con un plan claro: cuándo y dónde lo harás.<button class="btn primary" data-act="newHabit">Añadir un hábito</button></div>`}
+    ${paused.length?`<section class="card"><h3>En pausa</h3>${paused.map(h=>`<div class="row between" style="border-top:1px solid var(--line);margin-top:8px;padding-top:8px"><span>${esc(h.name)}</span><button class="btn small" data-act="pauseHabit" data-id="${h.id}">Reanudar</button></div>`).join('')}<p class="sub" style="margin-top:8px">Una pausa por viaje, enfermedad o cambio de rutina no es un fracaso.</p></section>`:''}
+    ${grads.length?`<section class="card"><h3>Ya automáticos</h3>${grads.map(h=>`<div class="row between" style="border-top:1px solid var(--line);margin-top:8px;padding-top:8px"><span>${esc(h.name)} <span class="sub">· ${esc(fmtDate(h.graduatedAt))}</span></span><button class="btn small ghost" data-act="ungradHabit" data-id="${h.id}">Reactivar</button></div>`).join('')}</section>`:''}
+  </div>`;
+}
+
+/* ---- Datos ---- */
+function spark(vals){
+  if(vals.length<2) return '';
+  const w=300,h=56,p=4, min=Math.min(...vals), max=Math.max(...vals), r=(max-min)||1;
+  const pts = vals.map((v,i)=>[p+i*(w-2*p)/(vals.length-1), h-p-((v-min)/r)*(h-2*p)]);
+  const d = pts.map((q,i)=>(i?'L':'M')+q[0].toFixed(1)+' '+q[1].toFixed(1)).join(' ');
+  const area = d+` L${pts[pts.length-1][0].toFixed(1)} ${h} L${pts[0][0].toFixed(1)} ${h} Z`;
+  const last = pts[pts.length-1];
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Tendencia de los últimos ${vals.length} registros"><path d="${area}" fill="var(--accent-soft)"/><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2" vector-effect="non-scaling-stroke"/><circle cx="${last[0]}" cy="${last[1]}" r="3.5" fill="var(--accent)"/></svg>`;
+}
+function vDatos(){
+  const missing = PRESETS.filter(p=>!S.metrics.some(m=>m.name===p.name));
+  return `
+  <div class="pagehead"><h1>Datos</h1><button class="btn primary" data-act="newMetric">Añadir</button></div>
+  <div class="stack tight">
+    ${missing.length?`<div class="card"><p class="sub" style="margin-bottom:8px">Sugeridos, con un toque</p><div class="seg">${missing.map(p=>`<button data-act="addMetric" data-n="${esc(p.name)}">+ ${esc(p.name)}</button>`).join('')}</div></div>`:''}
+    ${S.metrics.map(m=>{
+      const logs = S.logs.filter(l=>l.metric===m.id).sort((a,b)=>a.ts-b.ts);
+      const nums = logs.filter(l=>typeof l.value==='number').slice(-14).map(l=>l.value);
+      const last = logs[logs.length-1];
+      const avg = nums.length ? (nums.reduce((a,b)=>a+b,0)/nums.length) : null;
+      const lastTxt = last ? (m.type==='bool'?(last.value?'Sí':'No'):esc(last.value)) : 'Sin registros';
+      return `<div class="card">
+        <div class="row"><div style="flex:1;min-width:0"><h3>${esc(m.name)}</h3><div class="muted">${m.type==='num'?'Número'+(m.unit?' · '+esc(m.unit):''):m.type==='scale'?'Escala 1 a 5':m.type==='bool'?'Sí o no':'Texto'}</div></div>
+        ${m.type==='scale'||m.type==='bool'?'':`<button class="btn small primary" data-act="log" data-id="${m.id}">Registrar</button>`}</div>
+        ${quickLog(m)}
+        <div class="row" style="margin-top:10px;gap:18px">
+          <div><div class="sub">Último</div><b>${lastTxt}</b></div>
+          ${avg!==null?`<div><div class="sub">Promedio (14)</div><b>${avg.toFixed(1)}</b></div>`:''}
+          <div><div class="sub">Registros</div><b>${logs.length}</b></div>
+        </div>
+        ${spark(nums)}
+        <div class="row" style="margin-top:6px;gap:4px;flex-wrap:wrap">${m.type==='scale'||m.type==='bool'?`<button class="btn small ghost" data-act="log" data-id="${m.id}">Otra fecha o nota</button>`:''}<button class="btn small ghost" data-act="metricHist" data-id="${m.id}">Historial</button></div>
+      </div>`}).join('')||`<div class="card empty">Elige un dato sugerido arriba o crea el tuyo.</div>`}
+    <button class="btn block" data-act="exportCsv">Copiar todos los registros (CSV)</button><p class="sub">Consejo: mide conductas que puedes cambiar (horas de sueño, minutos de ejercicio), no solo resultados.</p>
+  </div>`;
+}
+
+/* ---- Más ---- */
+function weekStats(){
+  const t = today(), from = addDays(t,-6);
+  const done = S.tasks.filter(x=>x.done && x.doneAt>=from && x.doneAt<=t).length;
+  const hs = S.habits.filter(h=>!h.archived);
+  let hits=0, poss=hs.length*7; hs.forEach(h=>{ for(let i=0;i<7;i++) if((h.days||{})[addDays(t,-i)]) hits++; });
+  const open = tasksOpen().length, late = tasksOpen().filter(x=>x.due && x.due<t).length;
+  return { done, hits, poss, open, late, from };
+}
+function weekId(){ const d=new Date(); const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())); const day=t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-day); const y=new Date(Date.UTC(t.getUTCFullYear(),0,1)); return t.getUTCFullYear()+'-S'+pad(Math.ceil(((t-y)/86400000+1)/7)); }
+function vMas(){
+  const w = weekStats(); const rv = S.reviews[weekId()] || {};
+  return `
+  <div class="pagehead"><h1>Más</h1></div>
+  <div class="stack tight">
+    <div class="card">
+      <h2>Revisión semanal</h2>
+      <p class="muted" style="margin:6px 0 10px">Últimos 7 días</p>
+      <div class="row" style="gap:18px;flex-wrap:wrap">
+        <div><div class="sub">Tareas hechas</div><b>${w.done}</b></div>
+        <div><div class="sub">Hábitos</div><b>${w.poss?Math.round(w.hits/w.poss*100)+'%':'—'}</b></div>
+        <div><div class="sub">Pendientes</div><b>${w.open}</b></div>
+        <div><div class="sub">Vencidas</div><b style="color:${w.late?'var(--bad)':'inherit'}">${w.late}</b></div>
+      </div>
+      <div class="field" style="margin-top:12px"><label for="rv1">¿Qué salió bien esta semana?</label><textarea id="rv1" data-rv="good">${esc(rv.good||'')}</textarea></div>
+      <div class="field" style="margin-top:8px"><label for="rv2">¿Qué voy a cambiar la próxima semana?</label><textarea id="rv2" data-rv="change">${esc(rv.change||'')}</textarea></div>
+      <button class="btn block" data-act="shareWeek" style="margin-top:12px">Copiar resumen para compartir con alguien</button>
+    </div>
+    <div class="card">
+      <h2>Ajustes de enfoque</h2>
+      <div class="row" style="margin-top:10px">
+        <div class="field" style="flex:1"><label for="fm">Trabajo (min)</label><input type="number" id="fm" min="5" max="90" value="${S.settings.focusMin}" data-set="focusMin"></div>
+        <div class="field" style="flex:1"><label for="bm">Descanso (min)</label><input type="number" id="bm" min="1" max="30" value="${S.settings.breakMin}" data-set="breakMin"></div>
+      </div>
+      <div class="seg" style="margin-top:10px">${[[25,5],[50,10],[15,3]].map(([f,b])=>`<button data-act="preset" data-f="${f}" data-b="${b}" aria-pressed="${S.settings.focusMin===f&&S.settings.breakMin===b}">${f}/${b}</button>`).join('')}</div>
+    </div>
+    <div class="card">
+      <h2>Plan diario</h2>
+      <div class="field" style="margin-top:10px"><label for="ch">Horas que de verdad tengo para tareas</label><input type="number" id="ch" min="1" max="16" value="${S.settings.capacityH||6}" data-set="capacityH"></div>
+      <div class="why">Sirve para comparar lo que planeas con el tiempo real. Es una ayuda práctica, no un hallazgo de estudios.</div>
+    </div>
+    <div class="card">
+      <h2>Copia de seguridad</h2>
+      <p class="muted" style="margin:6px 0 10px">Tus datos se guardan en tu cuenta cuando es posible. Aquí puedes sacar o traer una copia.</p>
+      <div class="row" style="flex-wrap:wrap"><button class="btn" data-act="backupCopy">Copiar copia</button><button class="btn" data-act="backupRestore">Restaurar copia</button></div>
+      <p class="muted" id="status" style="margin-top:10px"></p>
+    </div>
+    <details class="card acc"><summary><h2>Qué tan sólido es cada pilar</h2></summary>
+      <p class="muted" style="margin:0 0 10px">Revisado con fuentes en noviembre de 2026.</p>
+      ${[['Monitorear tu progreso','Sólida','Harkin 2016: 138 estudios, d = 0.40'],['Plan "cuando…, haré…"','Sólida, efecto modesto','Metaanálisis 2006 d = 0.65; 2025 d = 0.27'],['Tiempo para formar un hábito','Moderada','Mediana de 59 a 66 días; rango de 4 a 335'],['Plan para obstáculos','Pequeña a moderada','g = 0.34, posible sesgo de publicación'],['Escribir un plan libera la mente','Moderada','Masicampo y Baumeister 2011'],['Pomodoro 25/5','Mixta','Sin ventaja frente a descansos a tu ritmo'],['Versión mínima del hábito','Limitada','Apoyo indirecto'],['Matriz de Eisenhower y regla de 3','Sin estudios directos','Herramientas prácticas']].map(([a,b,c])=>`<div style="padding:8px 0;border-top:1px solid var(--line)"><div class="row" style="justify-content:space-between;gap:8px"><b>${a}</b><span class="pill">${b}</span></div><div class="muted">${c}</div></div>`).join('')}
+    </details>
+    <details class="card acc"><summary><h2>Por qué estas apps se abandonan</h2></summary>
+      <p class="muted" style="margin:6px 0 10px">Y qué hace esta app al respecto. Revisado con fuentes en noviembre de 2026.</p>
+      ${[
+        ['Abandonar es lo normal','Sólida','Más de la mitad de los usuarios abandona en los primeros 100 días (7 de 9 estudios, revisión de 2024). El abandono agrupado fue de 43% en apps para enfermedades crónicas (2020).','Empieza con una sola cosa, sin cuenta ni configuración.'],
+        ['Dependencia de recordatorios y rachas','Limitada','Un estudio cualitativo de una sola app (Stawarz 2016) vio que ayudan a repetir, pero crean dependencia y fragilidad.','Los recordatorios de calendario caducan a los 30 días, puedes graduar hábitos y medir su automaticidad.'],
+        ['Desmotivación y rutina interrumpida','Moderada','Son las razones más comunes al dejar un tracker (revisión de 2019).','Puedes pausar un hábito y guardar tu razón personal.'],
+        ['Culpa y rachas rotas','Moderada','Las rachas rotas reducen la persistencia (Silverman y Barasch 2023). Responder con amabilidad a las fallas ayuda a retomar (Biskas y otros).','Racha flexible y bienvenida sin reproche.'],
+        ['Empezar de cero','Moderada','Los inicios de semana, mes o año aumentan la acción hacia las metas (Dai, Milkman y Riis, 2014).','Botón "Empezar de cero" y aviso los lunes.'],
+        ['Listas largas y planes optimistas','Sólida (falacia de la planificación)','Solemos subestimar cuánto tardan las tareas (Kahneman y Tversky, 1979). No encontré medido el efecto de las listas largas sobre el abandono.','Algún día, estimación por tarea y barra de capacidad.'],
+        ['Notificaciones','Moderada','En un ensayo, recibir una notificación multiplicó por 3.5 la probabilidad de abrir la app en la hora siguiente, pero no cambió cuánto tardaban en abandonarla.','No depende de avisos. Puedes usar alarmas de calendario.'],
+        ['Fricción visual y de inicio','Práctica de diseño, sin ensayos','Las guías de UX recomiendan llegar rápido al primer valor y mostrar lo avanzado solo cuando hace falta.','Opciones avanzadas y explicaciones plegadas, registro de un toque.'],
+        ['Lo que no resuelvo','Límite','Esta app vive en una página: no tiene widgets nativos de Android ni avisos push.','Para eso haría falta una app nativa.']
+      ].map(([a,b,c,d])=>`<div style="padding:10px 0;border-top:1px solid var(--line)"><div class="row" style="justify-content:space-between;gap:8px;align-items:flex-start"><b>${a}</b><span class="pill">${b}</span></div><div class="muted">${c}</div><div style="margin-top:4px"><b>Aquí:</b> ${d}</div></div>`).join('')}
+    </details>
+    <details class="card acc"><summary><h2>Detalle por función</h2></summary>${Object.keys(WHY).map(k=>`<p class="muted"><b style="color:var(--ink)">${esc(WHYT[k])}.</b> ${esc(WHY[k])}</p>`).join('')}</details>
+    <div class="card muted">
+      <b>Sobre los recordatorios.</b> Esta app muestra tareas vencidas y avisos mientras está abierta. Para una alarma real con la app cerrada, usa "Añadir al calendario" dentro de una tarea con fecha y hora.
+    </div>
+  </div>`;
+}
+
+/* ============ Modales ============ */
+function openSheet(title, html, foot){
+  const m = $('#modal'); const was = m.innerHTML !== '';
+  const keep = was && $('.sheet-body') ? $('.sheet-body').scrollTop : 0;
+  if(!was) ui.lastFocus = document.activeElement;
+  m.innerHTML = `<div class="sheet-bg" data-act="closeBg"><div class="sheet ${was?'':'enter'}" role="dialog" aria-modal="true" aria-labelledby="sheetT"><div class="grab" aria-hidden="true"></div><div class="sheet-head"><h2 id="sheetT">${title}</h2><button class="x" data-act="closeSheet" aria-label="Cerrar">✕</button></div><div class="sheet-body">${html}</div>${foot?`<div class="sheet-foot">${foot}</div>`:''}</div></div>`;
+  ['#app','#nav'].forEach(q=>{ const e=$(q); if(e) e.setAttribute('inert',''); });
+  const b = $('.sheet-body'); if(b && keep) b.scrollTop = keep;
+  if(!was){ const f = $('#modal input[type=text],#modal textarea'); setTimeout(()=>{ if(f && !f.value) f.focus(); else { const h=$('#sheetT'); if(h){ h.tabIndex=-1; h.focus(); } } },50); }
+}
+function closeSheet(){
+  $('#modal').innerHTML='';
+  ['#app','#nav'].forEach(q=>{ const e=$(q); if(e) e.removeAttribute('inert'); });
+  const l = ui.lastFocus; ui.lastFocus = null;
+  if(l && document.contains(l) && l.focus){ try{ l.focus(); }catch(e){} }
+}
+
+function taskSheet(id){
+  const t = id ? S.tasks.find(x=>x.id===id) : { id:'', title:'', notes:'', due:'', time:'', quad:'', top:false, steps:[], cue:'', est:0, someday:false };
+  ui.moreOpen = false;
+  ui.draft = JSON.parse(JSON.stringify(t));
+  paintTaskSheet(!id);
+}
+function paintTaskSheet(isNew){
+  const t = ui.draft;
+  const Q = [['q1','Urgente e importante','Hazlo ya'],['q2','Importante, no urgente','Prográmalo'],['q3','Urgente, no importante','Delega o acorta'],['q4','Ni urgente ni importante','Elimina']];
+  const more = ui.moreOpen || t.steps.length || t.cue || t.quad || t.notes;
+  openSheet(isNew?'Nueva tarea':'Editar tarea', `
+    <div class="field"><label for="tt">Tarea</label><input type="text" id="tt" value="${esc(t.title)}" placeholder="Empieza con un verbo: llamar, enviar, escribir" autocomplete="off" enterkeyhint="done"></div>
+    <div class="row"><div class="field" style="flex:1"><label for="td">Fecha</label><input type="date" id="td" value="${esc(t.due)}"></div><div class="field" style="flex:1"><label for="tm">Hora</label><input type="time" id="tm" value="${esc(t.time)}"></div></div>
+    <div class="field"><label for="te">Cuánto crees que tardas</label><select id="te">${[[0,'Sin estimar'],[10,'10 min'],[25,'25 min'],[45,'45 min'],[90,'1 h 30 min'],[180,'3 h']].map(([v,l])=>`<option value="${v}" ${(+t.est||0)===v?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div class="check"><input type="checkbox" id="ts" ${t.someday?'checked':''}><label for="ts">Algún día (no es para ahora)</label></div>
+    <details ${more?'open':''}><summary class="more">Más opciones</summary>
+      <div class="stack tight" style="margin-top:10px">
+        <div class="field"><label>Pasos pequeños</label>
+          <div id="steps" class="stack tight" style="gap:6px">${t.steps.map((s,i)=>`<div class="row" style="gap:0">${chk(s.done,`data-act="stepToggle" data-i="${i}"`,'Paso '+(i+1)+(s.done?' hecho':' pendiente'))}<input type="text" data-step="${i}" value="${esc(s.t)}" aria-label="Paso ${i+1}"><button class="x" data-act="stepDel" data-i="${i}" aria-label="Quitar paso ${i+1}">✕</button></div>`).join('')}</div>
+          <button class="btn small" data-act="stepAdd" style="margin-top:6px;align-self:flex-start">Añadir paso</button>
+        </div>
+        <div class="field"><label for="tc">Plan: cuando…, haré esto</label><input type="text" id="tc" value="${esc(t.cue)}" placeholder="Ej.: Cuando llegue a casa, abriré el documento"></div>
+        <div class="field"><label>Matriz de Eisenhower (opcional)</label>
+          <div class="quad">${Q.map(([k,a,b])=>`<button data-act="quad" data-q="${k}" aria-pressed="${t.quad===k}"><b>${a}</b><br><span class="sub">${b}</span></button>`).join('')}</div></div>
+        <div class="field"><label for="tn">Notas</label><textarea id="tn">${esc(t.notes)}</textarea></div>
+      </div>
+    </details>
+    ${!isNew?`<div class="dz"><button class="btn block" data-act="ics">Añadir al calendario</button><button class="btn block danger" data-act="delTask">Eliminar tarea</button></div>`:''}`,
+    `<button class="btn primary" data-act="saveTask" data-new="${isNew?1:0}">Guardar</button>`);
+}
+function readTaskDraft(){
+  const t = ui.draft; if(!t) return;
+  const g = id => { const e=$(id); return e?e.value:null; };
+  const tt=g('#tt'); if(tt!==null) t.title=tt; const td=g('#td'); if(td!==null) t.due=td; const tm=g('#tm'); if(tm!==null) t.time=tm;
+  const tc=g('#tc'); if(tc!==null) t.cue=tc; const tn=g('#tn'); if(tn!==null) t.notes=tn;
+  const te=g('#te'); if(te!==null) t.est=+te; const ts=$('#ts'); if(ts) t.someday=ts.checked;
+  const dt=$('#modal details'); if(dt && dt.open) ui.moreOpen=true;
+  document.querySelectorAll('[data-step]').forEach(e=>{ t.steps[+e.dataset.step].t = e.value; });
+}
+function habitSheet(id){
+  const h = id ? S.habits.find(x=>x.id===id) : { name:'', cue:'', tiny:'', ob:'', pb:'', rz:'', tm:'' };
+  const more = !!(h.rz||h.ob||h.pb||h.tm);
+  openSheet(id?'Editar hábito':'Nuevo hábito', `
+    <div class="field"><label for="hn">¿Qué hábito?</label><input type="text" id="hn" value="${esc(h.name)}" placeholder="Ej.: Leer" autocomplete="off"></div>
+    <div class="field"><label for="hc">¿Cuándo? Empieza con "Cuando…"</label><input type="text" id="hc" value="${esc(h.cue)}" placeholder="Cuando termine de cenar"></div>
+    <div class="field"><label for="ht">Versión mínima (2 minutos)</label><input type="text" id="ht" value="${esc(h.tiny)}" placeholder="Leer una página"></div>
+    <details ${more?'open':''}><summary class="more">Más opciones</summary>
+      <div class="stack tight" style="margin-top:10px">
+        <div class="field"><label for="hr">Mi razón para hacerlo</label><input type="text" id="hr" value="${esc(h.rz||'')}" placeholder="Para tener más energía por las tardes"></div>
+        <div class="field"><label for="ho">Obstáculo probable</label><input type="text" id="ho" value="${esc(h.ob||'')}" placeholder="Si estoy muy cansado"></div>
+        <div class="field"><label for="hp">Entonces haré (plan B)</label><input type="text" id="hp" value="${esc(h.pb||'')}" placeholder="Solo me pongo los zapatos"></div>
+        <div class="field"><label for="hm">Hora, para el recordatorio en calendario</label><input type="time" id="hm" value="${esc(h.tm||'')}"></div>
+      </div>
+    </details>
+    ${id?`<div class="dz">${h.tm?`<button class="btn block" data-act="habitIcs" data-id="${id}">Añadir recordatorio al calendario (30 días)</button>`:''}<button class="btn block" data-act="pauseHabit" data-id="${id}">${h.paused?'Reanudar hábito':'Pausar hábito'}</button><button class="btn block" data-act="gradHabit" data-id="${id}">Ya es automático</button><button class="btn block danger" data-act="delHabit" data-id="${id}">Eliminar hábito</button></div>`:''}`,
+    `<button class="btn primary" data-act="saveHabit" data-id="${id||''}">Guardar</button>`);
+}
+function metricSheet(){
+  openSheet('Nuevo dato', `
+    <div class="field"><label for="mn">Nombre</label><input type="text" id="mn" placeholder="Ej.: Gasto del día, Minutos de ejercicio" autocomplete="off"></div>
+    <div class="field"><label for="mt">Tipo</label><select id="mt"><option value="num">Número</option><option value="scale">Escala 1 a 5</option><option value="bool">Sí o no</option><option value="text">Texto</option></select></div>
+    <div class="field"><label for="mu">Unidad (opcional)</label><input type="text" id="mu" placeholder="min, $, kg…"></div>`,
+    `<button class="btn primary" data-act="saveMetric">Guardar</button>`);
+}
+function logSheet(id){
+  const m = S.metrics.find(x=>x.id===id);
+  let input = '';
+  if(m.type==='num'){ const prev = S.logs.filter(l=>l.metric===id).sort((a,b)=>b.ts-a.ts)[0]; input = `<input type="number" id="lv" step="any" inputmode="decimal" aria-label="${esc(m.name)}" value="${prev?esc(prev.value):''}">`; }
+  else if(m.type==='scale') input = `<div class="seg nums" id="lscale">${[1,2,3,4,5].map(n=>`<button data-act="scalePick" data-v="${n}" aria-pressed="false">${n}</button>`).join('')}</div><input type="hidden" id="lv">`;
+  else if(m.type==='bool') input = `<div class="seg" id="lscale"><button data-act="boolPick" data-v="1" aria-pressed="false">Sí</button><button data-act="boolPick" data-v="0" aria-pressed="false">No</button></div><input type="hidden" id="lv">`;
+  else input = `<textarea id="lv" aria-label="${esc(m.name)}"></textarea>`;
+  openSheet(esc(m.name), `
+    <div class="field"><label>Valor${m.unit?' ('+esc(m.unit)+')':''}</label>${input}</div>
+    <div class="field"><label for="ld">Fecha</label><input type="date" id="ld" value="${today()}"></div>
+    <div class="field"><label for="ln">Nota (opcional)</label><input type="text" id="ln"></div>`,
+    `<button class="btn primary" data-act="saveLog" data-id="${id}">Guardar</button>`);
+}
+function histSheet(id){
+  const m = S.metrics.find(x=>x.id===id);
+  const logs = S.logs.filter(l=>l.metric===id).sort((a,b)=>b.ts-a.ts).slice(0,60);
+  openSheet('Historial: '+esc(m.name), `
+    <div>${logs.length?logs.map(l=>`<div class="row between" style="border-bottom:1px solid var(--line);padding:4px 0"><div><b>${m.type==='bool'?(l.value?'Sí':'No'):esc(l.value)}</b> <span class="sub">${esc(m.unit||'')}</span><div class="sub">${esc(fmtDate(l.date))}${l.note?' · '+esc(l.note):''}</div></div><button class="x" data-act="delLog" data-id="${l.id}" data-m="${id}" aria-label="Eliminar registro del ${esc(fmtDate(l.date))}">✕</button></div>`).join(''):'<div class="empty">Aún no hay registros.</div>'}</div>
+    <div class="dz"><button class="btn block danger" data-act="delMetric" data-id="${id}">Eliminar este dato y sus registros</button></div>`);
+}
+function textSheet(title, body, actions){
+  openSheet(title, body, actions);
+}
+
+/* ============ Utilidades de UI ============ */
+let toastT=null;
+function toast(msg, undo){
+  const el=$('#toast'); ui.undo = undo||null;
+  el.innerHTML=`<div class="toast" role="status">${esc(msg)}${undo?` <button class="btn small" data-act="undo" style="margin-left:8px">Deshacer</button>`:''}</div>`;
+  clearTimeout(toastT); toastT=setTimeout(()=>{ el.innerHTML=''; ui.undo=null; }, undo?6000:3200);
+}
+function tickBanner(){
+  setInterval(()=>{
+    const now = new Date(), t = dkey(now), hm = pad(now.getHours())+':'+pad(now.getMinutes());
+    const hits = S.tasks.filter(x=>!x.done && x.due===t && x.time && x.time<=hm && !x._seen);
+    if(hits.length){
+      hits.forEach(x=>x._seen=true);
+      const slot=$('#bannerSlot'); if(slot) slot.innerHTML=`<div class="banner"><span><b>Recordatorio:</b> ${esc(hits[0].title)}</span><button class="btn small" data-act="dismissBanner">Listo</button></div>`;
+      beep(); try{ navigator.vibrate && navigator.vibrate(200); }catch(e){}
+    }
+  }, 20000);
+}
+function copyText(txt, okMsg){
+  const fallback = () => textSheet('Copia manual','<p class="muted">Tu navegador no permitió copiar. Selecciona y copia este texto.</p><textarea id="manual" style="min-height:180px" readonly></textarea>','<button class="btn" data-act="closeSheet">Cerrar</button>');
+  try{
+    navigator.clipboard.writeText(txt).then(()=>toast(okMsg),()=>{fallback(); const e=$('#manual'); if(e){e.value=txt;e.select();}});
+  }catch(e){ fallback(); const m=$('#manual'); if(m){m.value=txt;m.select();} }
+}
+async function saveFile(name,text){
+  const blob=new Blob([text],{type:'text/calendar'});
+  if(typeof claude!=='undefined'){ const dl=await claude.use('downloads'); if(!dl) throw 0; await dl.save({filename:name,data:blob}); return; }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function icsFor(t){
+  const d = (t.due||today()).replace(/-/g,''); const hasT = !!t.time; const tm = (t.time||'09:00').replace(':','')+'00';
+  const end = hasT ? (()=>{ const [h,m]=t.time.split(':').map(Number); const e=new Date(2000,0,1,h,m+30); return pad(e.getHours())+pad(e.getMinutes())+'00'; })() : '093000';
+  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Orden Diario//ES','BEGIN:VEVENT','UID:'+t.id+'@orden-diario','DTSTAMP:'+new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z','DTSTART:'+d+'T'+tm,'DTEND:'+d+'T'+end,'SUMMARY:'+(t.title||'Tarea').replace(/[\n,;]/g,' '),'BEGIN:VALARM','TRIGGER:-PT0M','ACTION:DISPLAY','DESCRIPTION:Recordatorio','END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n');
+}
+
+/* ============ Eventos ============ */
+document.addEventListener('submit', e=>{
+  if(e.target.id==='quick'){
+    e.preventDefault(); const i=$('#quickIn'); const v=i.value.trim(); if(!v) return;
+    S.tasks.unshift({ id:uid(), title:v, notes:'', due:'', time:'', quad:'', top:false, steps:[], cue:'', done:false, created:today() });
+    save(); render(); const n=$('#quickIn'); if(n) n.focus();
+  }
+});
+document.addEventListener('input', e=>{
+  const el = e.target;
+  if(el.dataset && el.dataset.rv){ const id=weekId(); S.reviews[id] = S.reviews[id]||{}; S.reviews[id][el.dataset.rv]=el.value; save(); }
+  if(el.dataset && el.dataset.set){ const v=Math.max(1,Math.min(90,parseInt(el.value)||1)); S.settings[el.dataset.set]=v; if(!fx.running) fx.left=0; save(); }
+});
+document.addEventListener('click', async e=>{
+  const b = e.target.closest('[data-act],[data-tab]'); if(!b) return;
+  if(b.dataset.tab){ ui.tab=b.dataset.tab; render(); window.scrollTo(0,0); return; }
+  const a = b.dataset.act, id = b.dataset.id;
+  switch(a){
+    case 'closeBg': if(e.target===b) closeSheet(); break;
+    case 'closeSheet': closeSheet(); break;
+    case 'toggle': { const t=S.tasks.find(x=>x.id===id); const wasTop=t.top; t.done=!t.done; t.doneAt=t.done?today():''; if(t.done) t.top=false; save(); render(); if(t.done) toast('Tarea completada', ()=>{ t.done=false; t.doneAt=''; t.top=wasTop; save(); render(); }); break; }
+    case 'top': { const t=S.tasks.find(x=>x.id===id); const n=tasksOpen().filter(x=>x.top).length; if(!t.top && n>=3){ toast('Ya tienes 3 prioridades. Quita una primero.'); break; } t.top=!t.top; save(); render(); break; }
+    case 'edit': taskSheet(id); break;
+    case 'newTask': taskSheet(''); break;
+    case 'filter': ui.filter=b.dataset.f; render(); break;
+    case 'stepAdd': readTaskDraft(); ui.draft.steps.push({t:'',done:false}); paintTaskSheet(!ui.draft.id); { const ins=document.querySelectorAll('[data-step]'); if(ins.length) ins[ins.length-1].focus(); } break;
+    case 'stepDel': readTaskDraft(); ui.draft.steps.splice(+b.dataset.i,1); paintTaskSheet(!ui.draft.id); break;
+    case 'stepToggle': readTaskDraft(); { const s=ui.draft.steps[+b.dataset.i]; s.done=!s.done; } paintTaskSheet(!ui.draft.id); break;
+    case 'quad': readTaskDraft(); ui.draft.quad = ui.draft.quad===b.dataset.q?'':b.dataset.q; paintTaskSheet(!ui.draft.id); break;
+    case 'saveTask': {
+      readTaskDraft(); const d=ui.draft; d.title=d.title.trim(); if(!d.title){ toast('Escribe el nombre de la tarea.'); break; }
+      d.steps = d.steps.filter(s=>s.t.trim()); if(d.someday) d.top=false;
+      if(b.dataset.new==='1'){ d.id=uid(); d.done=false; d.created=today(); S.tasks.unshift(d); }
+      else { const i=S.tasks.findIndex(x=>x.id===d.id); S.tasks[i]=Object.assign(S.tasks[i], d); }
+      save(); closeSheet(); render(); break; }
+    case 'delTask': { const ix=S.tasks.findIndex(x=>x.id===ui.draft.id); const gone=S.tasks[ix]; S.tasks.splice(ix,1); save(); closeSheet(); render(); toast('Tarea eliminada', ()=>{ S.tasks.splice(ix,0,gone); save(); render(); }); break; }
+    case 'ics': {
+      readTaskDraft(); const d=ui.draft; if(!d.due){ toast('Ponle fecha a la tarea primero.'); break; }
+      try{ await saveFile('tarea.ics', icsFor(d)); toast('Archivo de calendario listo'); }
+      catch(err){ copyText(icsFor(d),'Evento copiado. Pégalo en un archivo .ics para importarlo.'); }
+      break; }
+    case 'dismissBanner': { const s=$('#bannerSlot'); if(s) s.innerHTML=''; break; }
+    /* hábitos */
+    case 'newHabit': habitSheet(''); break;
+    case 'editHabit': habitSheet(id); break;
+    case 'saveHabit': {
+      const n=$('#hn').value.trim(); if(!n){ toast('Escribe el nombre del hábito.'); break; }
+      const cue=$('#hc').value.trim(), tiny=$('#ht').value.trim(), ob=$('#ho').value.trim(), pb=$('#hp').value.trim(), rz=$('#hr').value.trim(), tm=$('#hm').value;
+      if(id){ const h=S.habits.find(x=>x.id===id); Object.assign(h,{name:n,cue,tiny,ob,pb,rz,tm}); }
+      else S.habits.push({ id:uid(), name:n, cue, tiny, ob, pb, rz, tm, created:today(), days:{} });
+      save(); closeSheet(); render(); break; }
+    case 'delHabit': { const ix=S.habits.findIndex(x=>x.id===id); const gone=S.habits[ix]; S.habits.splice(ix,1); save(); closeSheet(); render(); toast('Hábito eliminado', ()=>{ S.habits.splice(ix,0,gone); save(); render(); }); break; }
+    case 'hday': { const h=S.habits.find(x=>x.id===id); h.days=h.days||{}; const k=b.dataset.day; if(h.days[k]) delete h.days[k]; else h.days[k]=1; save(); render(); break; }
+    /* datos */
+    case 'newMetric': metricSheet(); break;
+    case 'saveMetric': { const n=$('#mn').value.trim(); if(!n){ toast('Escribe el nombre del dato.'); break; } S.metrics.push({ id:uid(), name:n, type:$('#mt').value, unit:$('#mu').value.trim() }); save(); closeSheet(); render(); break; }
+    case 'log': logSheet(id); break;
+    case 'scalePick': case 'boolPick': { $('#lv').value=b.dataset.v; document.querySelectorAll('#lscale button').forEach(x=>x.setAttribute('aria-pressed', x===b)); break; }
+    case 'saveLog': {
+      const m=S.metrics.find(x=>x.id===id); let v=$('#lv').value;
+      if(v===''||v==null){ toast('Falta el valor.'); break; }
+      if(m.type==='num'||m.type==='scale') v=parseFloat(v); else if(m.type==='bool') v=v==='1'?1:0;
+      if((m.type==='num'||m.type==='scale') && isNaN(v)){ toast('Escribe un número válido.'); break; }
+      const date=$('#ld').value||today();
+      S.logs.push({ id:uid(), metric:id, date, ts:new Date(date+'T12:00:00').getTime()+S.logs.length, value:v, note:$('#ln').value.trim() });
+      save(); closeSheet(); render(); toast('Registro guardado'); break; }
+    case 'metricHist': histSheet(id); break;
+    case 'delLog': S.logs=S.logs.filter(x=>x.id!==id); save(); histSheet(b.dataset.m); render(); break;
+    case 'delMetric': closeSheet(); textSheet('¿Eliminar este dato?','<p class="sub">Se borrarán también todos sus registros. No se puede deshacer.</p>',`<button class="btn" data-act="closeSheet">Conservar</button><button class="btn danger" data-act="delMetricOk" data-id="${id}">Eliminar dato</button>`); break;
+    case 'delMetricOk': S.metrics=S.metrics.filter(x=>x.id!==id); S.logs=S.logs.filter(x=>x.metric!==id); save(); closeSheet(); render(); break;
+    case 'exportCsv': {
+      const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
+      const rows=['fecha,dato,valor,unidad,nota'].concat(S.logs.slice().sort((a,b)=>a.ts-b.ts).map(l=>{ const m=S.metrics.find(x=>x.id===l.metric)||{name:'?',unit:''}; return [l.date,q(m.name),q(l.value),q(m.unit||''),q(l.note||'')].join(','); }));
+      copyText(rows.join('\n'),'CSV copiado. Pégalo en una hoja de cálculo.'); break; }
+    /* enfoque */
+    case 'fxToggle': {
+      if(fx.running){ fx.left=Math.max(0,Math.round((fx.end-Date.now())/1000)); fx.running=false; clearInterval(fx.timer); }
+      else { const mins=fx.mode==='focus'?S.settings.focusMin:S.settings.breakMin; const left=fx.left||mins*60; fx.end=Date.now()+left*1000; fx.running=true; fx.timer=setInterval(fxTick,500); try{ actx = actx || new (window.AudioContext||window.webkitAudioContext)(); }catch(err){} }
+      render(); break; }
+    case 'undo': if(ui.undo){ const f=ui.undo; ui.undo=null; $('#toast').innerHTML=''; f(); } break;
+    case 'welcomeOk': ui.welcomeDismissed=true; render(); break;
+    case 'freshStart': {
+      const t=today(); const moved=[];
+      S.tasks.forEach(x=>{ if(!x.done && x.due && x.due<t){ moved.push({x,due:x.due,time:x.time,top:x.top}); x.due=''; x.time=''; x.someday=true; x.top=false; } });
+      ui.welcomeDismissed=true; save(); render();
+      toast(moved.length+' tareas pasaron a Algún día', ()=>{ moved.forEach(m=>{ m.x.due=m.due; m.x.time=m.time; m.x.top=m.top; m.x.someday=false; }); save(); render(); }); break; }
+    case 'obTask': S.settings.onboarded=true; save(); render(); { const q=$('#quickIn'); if(q) q.focus(); } break;
+    case 'obHabit': S.settings.onboarded=true; save(); ui.tab='habitos'; render(); habitSheet(''); break;
+    case 'obData': S.settings.onboarded=true; save(); ui.tab='datos'; render(); break;
+    case 'obSkip': S.settings.onboarded=true; save(); render(); break;
+    case 'qlog': { S.logs=S.logs.filter(l=>!(l.metric===id && l.date===today())); S.logs.push({ id:uid(), metric:id, date:today(), ts:Date.now(), value:+b.dataset.v, note:'' }); save(); render(); toast('Registrado'); break; }
+    case 'addMetric': { const p=PRESETS.find(x=>x.name===b.dataset.n); if(p){ S.metrics.push({ id:uid(), name:p.name, type:p.type, unit:p.unit }); save(); render(); } break; }
+    case 'auto': { const h=S.habits.find(x=>x.id===id); h.auto=h.auto||[]; h.auto.push({ d:today(), v:+b.dataset.v }); save(); render(); toast('Anotado'); break; }
+    case 'pauseHabit': { const h=S.habits.find(x=>x.id===id); h.paused=!h.paused; save(); closeSheet(); render(); toast(h.paused?'Hábito en pausa':'Hábito reanudado'); break; }
+    case 'gradHabit': { const h=S.habits.find(x=>x.id===id); h.graduated=true; h.graduatedAt=today(); save(); closeSheet(); render(); toast('Hábito graduado. Ya no necesitas marcarlo.', ()=>{ h.graduated=false; save(); render(); }); break; }
+    case 'ungradHabit': { const h=S.habits.find(x=>x.id===id); h.graduated=false; save(); render(); break; }
+    case 'habitIcs': {
+      const h=S.habits.find(x=>x.id===id);
+      try{ await saveFile('habito.ics', icsHabit(h)); toast('Archivo de calendario listo'); }
+      catch(err){ copyText(icsHabit(h),'Evento copiado. Pégalo en un archivo .ics para importarlo.'); }
+      break; }
+    case 'preset': S.settings.focusMin=+b.dataset.f; S.settings.breakMin=+b.dataset.b; clearInterval(fx.timer); fx.running=false; fx.left=0; save(); render(); break;
+    case 'shareWeek': {
+      const w=weekStats(), rv=S.reviews[weekId()]||{};
+      const txt=`Mi semana (${weekId()})\nTareas hechas: ${w.done}\nHábitos: ${w.poss?Math.round(w.hits/w.poss*100)+'%':'sin hábitos'}\nPendientes: ${w.open} (vencidas: ${w.late})\nLo que salió bien: ${rv.good||'—'}\nLo que cambiaré: ${rv.change||'—'}`;
+      copyText(txt,'Resumen copiado. Envíaselo a alguien de confianza.'); break; }
+    case 'fxReset': clearInterval(fx.timer); fx.running=false; fx.left=0; render(); break;
+    case 'fxMode': clearInterval(fx.timer); fx.running=false; fx.left=0; fx.mode=b.dataset.m||(fx.mode==='focus'?'break':'focus'); render(); break;
+    /* copia de seguridad */
+    case 'backupCopy': copyText(JSON.stringify(S),'Copia lista. Pégala en un lugar seguro.'); break;
+    case 'backupRestore': textSheet('Restaurar copia','<p class="muted">Pega aquí la copia que guardaste. Reemplazará tus datos actuales.</p><textarea id="bk" style="min-height:160px"></textarea>','<button class="btn primary" data-act="backupOk">Restaurar</button><button class="btn" data-act="closeSheet">Cancelar</button>'); break;
+    case 'backupOk': { try{ const o=JSON.parse($('#bk').value); if(!o||!Array.isArray(o.tasks)||!Array.isArray(o.habits)) throw 0; S=Object.assign({tasks:[],habits:[],metrics:[],logs:[],reviews:{},settings:{focusMin:25,breakMin:5,seeded:true}},o); S.settings.seeded=true; save(); closeSheet(); render(); toast('Copia restaurada'); }catch(err){ toast('Ese texto no es una copia válida.'); } break; }
+  }
+});
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape' && $('#modal').innerHTML) closeSheet();
+  if(e.key==='Enter' && e.target && ['tt','hn','mn'].includes(e.target.id)){ e.preventDefault(); const p=$('.sheet-foot .primary'); if(p) p.click(); }
+});
+
+init();
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{})); }
+</script>
+</body>
+</html>
